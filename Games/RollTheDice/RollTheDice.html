@@ -1,0 +1,411 @@
+<!Doctype html>
+<html lang="en">
+<head>
+	<meta charset = "UTF-8">
+	<title>Roll The Dice</title>
+	<script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+	
+	<style type = "text/css">
+		body{
+			margin-top: 50px;
+			text-align: center;
+		}
+
+	</style>
+
+</head>
+
+<body>
+	<script type ="text/javascript">
+		
+		//SCENE DECLARATIONS
+
+		//FIRST SCENE
+		var StartScene = new Phaser.Class({
+
+			Extends: Phaser.Scene,
+			initialize: function StartScene(){
+				
+				Phaser.Scene.call(this, { key: 'startScene',active:true});	
+
+			},
+
+			preload:function(){
+
+				var {width,height} = this.sys.game.canvas;
+				//Load Dice
+				for(let i=1; i <= 6; i++){
+					
+					this.load.image(`dice${i}`,`dice-assets/dice${i}.png`);
+				}
+				//Load Dice SpriteSheet
+				this.load.spritesheet('dice','dice-assets/dice.png', {frameWidth:96, frameHeight: 96});
+				//Load Fish Pile
+				
+				this.load.image(`fish`,`dice-assets/fish.png`);
+				
+				//Load Special Fishes
+				for (let i = 1; i <=5; i++)
+					this.load.image(`specialfish${i}`,`dice-assets/specialfish${i}.png`);
+				//Load Pail
+				this.load.image('fishpail','dice-assets/fishpail.png');
+
+				//Load Pond
+				this.load.image('fishpond','dice-assets/0.png');
+
+				//Load Pond SpriteSheet
+				this.load.spritesheet('pondsprite','dice-assets/fishpondspritesheet.png',{frameWidth:500,frameHeight:400});
+				//Load Plate
+
+				this.load.image('plate','dice-assets/plate.png');
+
+				var progressBar = this.add.graphics()
+				var progressBox =this.add.graphics().fillStyle(0x222222,0.8).fillRect(width/2 -150,height/3 + 20,300,30);
+		
+				var loadingText = this.make.text({
+					x:width/2,
+					y:height/3,
+					text: 'Loading...',
+					style: {
+						font: '20px monospace',
+						fill: 'xffffff'
+					}
+				}).setOrigin(0.5,0.5);
+
+				this.load.on('progress', function(value){
+					progressBar.clear();
+					progressBar.fillStyle(0xffffff,1);
+					progressBar.fillRect(width/2-150,height/3 +20, 300 * value, 30);
+				});
+				
+				this.load.on('fileprogress', function(file){
+					//console.log(file.src);
+				});
+
+				this.load.on('complete',function(){
+					progressBar.destroy();
+					progressBox.destroy();
+					loadingText.destroy();
+				});
+
+				//Load Sounds
+				this.load.audio('rolldice','dice-assets/rolldice.mp3');
+				this.load.audio('splash','dice-assets/splash.mp3');
+			},
+			create:function(){
+				
+				let {width,height} = this.sys.game.canvas;
+				
+				this.add.text(width/2 -110, height/3, 'Click to continue...', { fontSize: '20px', fill: '#000' });
+
+				  
+				 this.input.once('pointerdown', function() {
+            		this.scene.start('playGame');
+            		}, this);
+
+        	
+			}
+		});
+
+		//SECOND SCENE
+		var PlayGame = new Phaser.Class({
+
+			Extends: Phaser.Scene,
+			initialize: function PlayGame(){
+
+				Phaser.Scene.call(this, {key:'playGame'});
+
+				this.dice = [];
+				this.random =  0;
+				this.fishPile =[];
+				this.pail;
+				this.pond;
+				this.plate1;
+				this.plate2;
+				this.dicesprite;
+				this.pondsprite;
+				this.splash;
+				this.rolldice;
+				this.player1 = {'player': 1, 'fishPile':[],'text':'Number of fishes' };
+				this.player2 = {'player': 2,'fishPile':[],'text':'Number of fishes' };
+				
+
+			},
+			
+			create: function(){
+
+
+				this.add.text(80,16,`Instructions:\n1.Click on the fish pail to distribute the fishes on the plate.\n2.Each player will roll the dice and throw\nthat many fishes in the pond.\n3.Player whose plate is empty first wins.\n4.If a player throws a special fish in pond, the other\nplayer has to pick that many fishes from the pail.`,{ fontSize: '16px', fill: '#000' });
+
+				this.random = Math.floor(Math.random() * 6);
+
+				
+				this.dicesprite = this.physics.add.sprite(120,310,'dice').setInteractive().on('pointerdown',this.rollDice,this).on('animationcomplete',this.showDice,this);
+
+				for (let i = 1; i <= 6;i++){
+					this.dice.push(this.physics.add.sprite(120,310,`dice${i}`).setData('key',1).setVisible(false).setInteractive().on('pointerdown', this.rollDice,this));
+				}
+							
+				this.anims.create({
+					key:'click',
+					frames:this.anims.generateFrameNumbers('dice',{start:0, end: 15}),
+					frameRate:10,
+					repeat:0
+				});
+				
+
+				this.pail = this.physics.add.sprite(630,300,'fishpail').setScale(0.10,0.10).setInteractive().on('pointerdown',this.distributeFish,this).on('pointerup',this.disableDistribute);
+					
+
+				this.pondsprite = this.physics.add.sprite(360,300,'pondsprite').setScale(0.75,0.75).setImmovable(true);
+				
+				this.pond = this.physics.add.sprite(360,320,'fishpond').setVisible(false);
+
+				this.anims.create({
+					key:'ripples',
+					frames:this.anims.generateFrameNumbers('pondsprite',{frames:[0,1,2,0]}),
+					frameRate:6,
+					repeat: 0
+				});
+				
+
+				this.plate1 = this.physics.add.sprite(200,550,'plate').setData('key',1);
+				this.plate2 = this.physics.add.sprite(530,550,'plate').setData('key',2);
+
+				this.add.text(160,600,`Player 1`,{fontSize:'16px',fill:'#000'});
+				this.player1.text = this.add.text(120,620,`Number of fishes:${this.player1.fishPile.length}`,{fontSize:'16px',fill:'#000'});
+				this.add.text(490,600,`Player 2`,{fontSize:'16px',fill:'#000'});
+				this.player2.text = this.add.text(450,620,`Number of fishes:${this.player2.fishPile.length}`,{fontSize:'16px',fill:'#000'});
+				//Adding special fishes	
+				for(let i= 1;i <=5;i++){
+					this.fishPile.push(this.physics.add.sprite(620,260,`specialfish${i}`).setData({'key':i,'special':true}).setScale(0.20,0.20).setInteractive({draggable:true}).on('dragstart',this.pickFish).on('drag',this.moveFish).on('dragend',this.dropFish));
+				}	
+
+				//Adding normal fishes
+				for(let i= 1;i <=20;i++){
+					this.fishPile.push(this.physics.add.sprite(620,260,`fish`).setData({'key':i,'special':false}).setScale(0.20,0.20).setInteractive({draggable:true}).on('dragstart',this.pickFish).on('drag',this.moveFish).on('dragend',this.dropFish));
+				}	
+
+				this.splash  = this.sound.add('splash');
+				this.rolldice = this.sound.add('rolldice');
+
+
+				
+
+			},
+
+			pickFish: function(){
+				this.setTint(0x7a7a7a);
+			},
+
+			dropFish:function(){
+				this.clearTint();
+			},
+
+			moveFish:function(pointer,dragX,dragY){
+				
+				this.x = dragX;
+				this.y = dragY;
+			},
+
+			distributeFish: function(){
+				
+				let fish;
+				let i,j = 0;
+
+				if (this.fishPile.length > 0){
+					while(this.player1.fishPile.length < 7){
+						j++;
+						i = Math.floor(Math.random() * this.fishPile.length);
+		
+						this.player1.fishPile.push(this.fishPile[i].setPosition(150+ j*10,540).setVisible(true).setData('belongsTo',1));
+						this.fishPile.splice(i,1);
+					}
+					
+					this.player1.text.setText(`Number of fishes:${this.player1.fishPile.length}`);
+					j = 0;
+
+					while(this.player2.fishPile.length < 7){
+						i = Math.floor(Math.random() * this.fishPile.length);
+						this.player2.fishPile.push(this.fishPile[i].setPosition(490 + 10*j,540).setData('belongsTo',2));
+						this.fishPile.splice(i,1);
+						j++;
+					}
+					
+					this.player2.text.setText(`Number of fishes:${this.player2.fishPile.length}`);
+				}
+
+			},
+
+			generateRandomNumbers(size){
+  				let random = [];
+				let n = Math.floor(Math.random() * size);
+				random.push(n);
+
+				while(random.length < size){
+					n = Math.floor(Math.random() * size);
+					if(!random.includes(n))
+						random.push(n);		
+				}
+
+				return random;
+
+			},
+
+			disableDistribute:function(){
+				this.setTint(0x7a7a7a);
+				this.removeInteractive();
+			},
+
+			rollDice: function(){
+					
+				this.dice[this.random].visible = false;
+				this.dicesprite.visible = true;
+
+				this.dicesprite.anims.play('click',true);
+				
+				this.rolldice.play();
+				console.log(this.fishPile.length);
+					
+			},
+
+			showDice: function(animation,frame){
+				this.dicesprite.visible = false;
+				let random = Math.floor(Math.random() * 6);
+
+				this.random = random;
+				this.dice[random].visible = true;
+
+			},
+
+			update:function(){
+
+				this.physics.collide(this.pond, this.player1.fishPile,this.dropFishInPond,null, this);
+
+				this.physics.collide(this.pond, this.player2.fishPile,this.dropFishInPond,null, this);
+				this.physics.collide(this.pond,this.fishPile,this.fishDrop,null,this);
+				this.physics.collide(this.plate1,this.fishPile,this.set,null,this);
+				this.physics.collide(this.plate2,this.fishPile,this.set,null,this);
+
+				//so i had dropFish and dropFishInPond and the compiler was usinfg dropFish function
+			},
+
+			fishDrop:function(pond,fish){
+				if(this.fishPile.length > 0){
+					
+					let index = this.fishPile.indexOf(fish);
+					this.fishPile.splice(index,1);
+					this.pondsprite.anims.play('ripples',true);
+					this.splash.play();
+					fish.destroy();
+				}
+
+			},
+
+			set:function(plate,fish){
+				let index;
+				if (this.fishPile.length > 0){
+					if(plate.getData('key') === 1){
+						this.player1.fishPile.push(fish);
+						index = this.fishPile.indexOf(fish);
+						this.fishPile.splice(index,1);
+						this.player1.text.setText(`Number of fishes:${this.player1.fishPile.length}`);
+						
+					}
+					else if (plate.getData('key') === 2){
+						this.player2.fishPile.push(fish);
+						index = this.fishPile.indexOf(fish);
+						this.fishPile.splice(index,1);
+						this.player2.text.setText(`Number of fishes:${this.player2.fishPile.length}`);
+						
+						
+					}
+				}
+
+			},
+
+			distributeFishes:function(player,opponent,amount){
+				if (player.player === 1 ){
+					let random; 
+					if (this.fishPile.length > 0){
+						for(let i = 0; i< amount;i++){
+							random = Math.floor(Math.random() * this.fishPile.length);
+							opponent.fishPile.push(this.fishPile[random].setPosition(430,500).setVisible(true).setData('belongsTo',2));
+							this.fishPile.splice(random,1);
+
+						}
+						
+						opponent.text.setText(`Number of fishes:${opponent.fishPile.length}`);
+					}
+				}
+				else if (player.player === 2 ){
+					let random;
+					if(this.fishPile.length > 0){
+						for(let i = 0; i< amount;i++){
+							random = Math.floor(Math.random() * this.fishPile.length);
+							opponent.fishPile.push(this.fishPile[random].setPosition(150,500).setVisible(true).setData('belongsTo',1));
+						}
+						
+						opponent.text.setText(`Number of fishes:${opponent.fishPile.length}`);
+					}
+				}
+			},
+			
+			dropFishInPond:function(pond,fish){
+			
+				let index;		
+
+				//first check which player dropped
+				if(fish.getData('belongsTo') === 1){
+					index = this.player1.fishPile.indexOf(fish);	
+					if (fish.getData('special') === true){
+						this.distributeFishes(this.player1,this.player2,fish.getData('key'));
+					}
+					this.player1.fishPile.splice(index,1)
+					this.player1.text.setText(`Number of fishes:${this.player1.fishPile.length}`);
+				}else 
+				if(fish.getData('belongsTo') === 2){
+					index = this.player2.fishPile.indexOf(fish);
+
+					if (fish.getData('special') === true){
+						this.distributeFishes(this.player2,this.player1,fish.getData('key'));
+					}
+
+					this.player2.fishPile.splice(index,1);
+					this.player2.text.setText(`Number of fishes:${this.player2.fishPile.length}`);
+				}
+
+				this.pondsprite.anims.play('ripples',true);
+				this.splash.play();
+				
+
+				fish.destroy();
+			}
+
+
+		});
+
+		//GAME CONFIGURATION
+		var config = {
+			type:Phaser.AUTO,
+			width: 700,
+			height: 700,
+			backgroundColor: '00b200',
+			scene: [StartScene,PlayGame],
+			physics:{
+				default:'arcade'
+			}
+		}	
+		
+		//STARTING THE GAME
+		var game = new Phaser.Game(config);
+
+		//Notes: 
+		// When distributing the fish...the fishes should be removed from the fishpile and assigned to the players' fishpile
+		//collision detection should be on between players' fishpiles and the pond
+
+	</script>
+</body>
+
+
+</html>

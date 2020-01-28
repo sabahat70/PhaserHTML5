@@ -1,0 +1,137 @@
+<!Doctype html>
+<html lang ="en">
+<head>
+	<meta charset ="UTF-8">
+	<title>Breakout-Easy</title>
+	<script src ="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+	<style type = "text/css">
+		body{
+			margin:0;
+			text-align:center;
+		}
+	</style>
+
+
+</head>
+<body>
+	<script type = "text/javascript">
+
+		var config ={
+
+			type: Phaser.AUTO,
+			width: 400,
+			height:450,
+			backgroundColor:'#3598db',
+			scene: {
+				preload:preload,
+				create:create,
+				update:update,
+				hit:hit
+			},
+			physics:{
+				default:'arcade'
+			}
+		}
+
+
+		var game = new Phaser.Game(config);
+		
+
+		var paddle;
+		var bricks;
+		var ball;
+
+		var left;
+		var right;
+
+
+		var counter;
+
+		function preload(){
+
+			this.load.image('paddle', 'assets/paddle.png')
+			this.load.image('brick', 'assets/brick.png')
+			this.load.image('ball','assets/ball.png')
+
+		}
+
+		function create(){
+			counter = 0;
+
+			
+
+			//arrow keys
+			left = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
+			right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
+
+			paddle = this.physics.add.sprite(200,400,'paddle');
+			paddle.body.immovable = true;
+
+			bricks = this.physics.add.group(); //dynamic group
+
+			for (var i = 0; i < 5; i++) {
+        		for (var j = 0; j < 5; j++) {
+            // Create the brick at the correct position
+            	bricks.create(55+i*60, 55+j*35, 'brick');
+
+            	
+        		}
+    		}
+
+    		ball = this.physics.add.sprite(200,300,'ball').setCollideWorldBounds(true).setBounce(1,1); // the horizontal bounce relative to 1, the vertical bounce relative to 1
+
+    		//ball.body.velocity.x = 200;
+    		//ball.body.velocity.y = 200;
+
+    	
+		}
+
+		function update(){
+			//paddle
+			if (left.isDown){
+				 paddle.body.velocity.x = -300;
+				 if (counter === 0){
+				 	ball.body.velocity.x = 200;
+    		    	ball.body.velocity.y = 200;
+    		    	counter++;
+    		    }
+    		 }
+			else if(right.isDown){
+			  	paddle.body.velocity.x = 300;
+			  	if (counter === 0){
+				 	ball.body.velocity.x = 200;
+    		    	ball.body.velocity.y = 200;
+    		    	counter++;
+    		    }
+			  	
+			}
+			else paddle.body.velocity.x = 0;
+
+			//collision detection
+			this.physics.collide(paddle,ball);
+			this.physics.collide(ball,bricks,hit,null,this);
+
+
+			if(ball.y > paddle.y || bricks.countActive() === 0){
+				this.scene.restart();
+			}
+
+
+
+
+
+		}
+		function hit(ball,brick){
+			brick.disableBody(true,true); // the first arguement deactivates the game object and the second argument hides that object
+
+			ball.body.velocity.x = 200;
+			ball.body.velocity.y = 200;
+			
+		}
+	</script>
+
+
+
+	</body>
+
+</html>

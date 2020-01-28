@@ -1,0 +1,259 @@
+<!Doctype html>
+<html lang="en">
+<head>
+	<meta charset = "UTF-8">
+	<title>Matching Cards</title>
+	<script src="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+	<style type = "text/css">
+		body{
+			margin-top: 50px;
+			text-align: center;
+		}
+
+	</style>
+
+</head>
+
+<body>
+	<script type ="text/javascript">
+
+		var config = {
+			type:Phaser.AUTO,
+			width: 700,
+			height: 600,
+			backgroundColor: '808080',
+			scene: {
+				preload:preload,
+				create:create,
+				update:update
+				
+			},
+			physics:{
+				default:'arcade'
+			}
+		}
+
+		//Global Variables 
+
+		//Initializing the Phaser Framework
+		var game = new Phaser.Game(config);
+		
+		
+		var cards = [];
+		var cardback = [];
+	
+		
+		var mouseClicks = 0;
+
+		var position = [];
+		var timer;
+
+		
+
+		var score = 0;
+		var scoreText;
+
+
+		//create two array of cards that will be matched; maybe create an id property
+		//create a flipped card back for all cards
+
+		function preload(){
+			
+			for(let i = 0; i < 6; i++){
+				
+				this.load.image(`card${i}`,`cards-assets/card${i}.png`);
+				
+			}
+
+			this.load.image('cardback','cards-assets/cardback.png');
+			
+
+		}
+
+
+		function create(){
+
+			timer = this.time.addEvent({
+				delay:500,
+				loop: true,
+				callback:check,
+				paused: true
+				});
+
+		
+		
+			
+			scoreText = this.add.text(20,50,`Score: ${score}`,{ fontSize: '25px', fill: '#000' });
+ 			
+ 			setupCards(this);
+ 			fillCards(this);
+
+
+			/*for(let i = 0; i < 6 ; i++){
+				
+				let n = random[i];
+				
+				cards.push(this.physics.add.sprite(i*100 +100,250,`card${n}`).setData({'id': n, 'position': i}).setInteractive().setVisible(false).setImmovable());
+			}
+
+			random = generateRandom();
+
+			for(let i = 0; i < 6 ; i++){
+				
+				let n = random[i];
+				
+				cards.push(this.physics.add.sprite(i*100 +100,350,`card${n}`).setData({'id': n, 'position': i+6}).setInteractive().setVisible(false).setImmovable());
+			}
+			
+			for(let i = 0; i < 6 ; i++){
+
+				
+				cardback.push(this.physics.add.sprite(i*100 +100,250,`cardback`).setData('position', i).setInteractive().setImmovable().on('pointerdown',turnCard));
+			}
+			for(let i = 0; i < 6 ; i++){
+
+				
+				cardback.push(this.physics.add.sprite(i*100 +100,350,`cardback`).setData('position', i+6).setInteractive().setImmovable().on('pointerdown',turnCard));
+			}*/
+			
+			
+			
+			
+			
+		}
+
+		
+		function update(){
+
+			if(mouseClicks >= 2){
+				timer.paused = false;
+			}
+			else{
+				timer.paused = true;
+			}
+			
+		
+			
+			
+			
+		}
+
+		
+
+		function fillCards(thisgame){
+
+			let random = generateRandomArray(6);
+			let rows = 2
+			let iter,n;
+			for (let i = 0; i < rows; i++){
+					
+					iter = i * 6;
+					
+				for (let j = 0; j < 6; j++){
+
+					n = random[iter + j];
+					cards.push(thisgame.physics.add.sprite(j*100 +100,i*100 +150,`card${n}`).setData({'id': n, 'position': iter + j}).setVisible(false).setInteractive().setImmovable());
+				}
+			}
+
+		}
+
+		function setupCards(thisgame){
+
+			let rows = 2
+			let iter;
+			for (let i = 0; i < rows; i++){
+					
+					iter = i * 6;
+					
+				for (let j = 0; j < 6; j++){
+
+				
+					cardback.push(thisgame.physics.add.sprite(j*100 +100,i*100 +150,`cardback`).setData('position',iter + j).setInteractive().setImmovable().on('pointerdown',turnCard));
+				}
+			}
+
+		}
+
+		function check(){
+			
+			if(mouseClicks >= 2){
+				
+				mouseClicks = 0;
+				let card1 = position[0];
+				let card2 = position[1];
+				
+				if (cards[card1].getData('id') !== cards[card2].getData('id')){
+					cardback[position.pop()].visible = true;
+					cardback[position.pop()].visible = true;
+					cards[card1].visible = false;
+					cards[card2].visible = false;
+					score--;
+					scoreText.setText(`Score: ${score}`);
+				}
+				else{
+					position.pop();
+					position.pop();
+					score = score + 2;
+					scoreText.setText(`Score: ${score}`);
+
+				
+				}
+			}
+		}
+
+		function turnCard(){
+			
+			
+			mouseClicks++;
+			
+			
+			if (mouseClicks <= 2){
+
+				let index = this.getData('position');
+				position.push(index);
+				this.visible = false;
+				cards[index].visible = true;
+			}
+			
+
+		}
+
+		function generateRandomArray(size){
+
+			let random = [];
+			let n = Math.floor(Math.random() * (size * 2));
+			random.push(n);
+			while(random.length < size*2){
+				n = Math.floor(Math.random() * (size*2));
+				if(!random.includes(n)){
+					random.push(n);		
+				}
+			}
+			return random.map( el => el < size ? el: el-size);
+			
+		}
+
+		function generateRandom(size){
+
+			let random = [];
+			let n = Math.floor(Math.random() * size);
+			random.push(n);
+
+			while(random.length < size){
+				n = Math.floor(Math.random() * size);
+				if(!random.includes(n))
+					random.push(n);		
+			}
+
+			return random;
+		}
+
+		
+		
+
+	</script>
+	</body>
+
+
+</html>
