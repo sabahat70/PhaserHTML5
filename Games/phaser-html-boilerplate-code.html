@@ -37,33 +37,21 @@
 
 
 		var game = new Phaser.Game(config);
-		
-        var right;
-        var diosprite;
+	
 
 		function preload(){
-			this.load.spritesheet('diosprite','dio.png', {frameWidth:72, frameHeight: 122});
+	
 
 		}
 
 		function create(){
 
-				right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
-				this.diosprite = this.physics.add(360,300,'diosprite')
-
-				this.anims.create({
-					key:'dio-walk',
-					frames:this.anims.generateFrameNumbers('diosprite',{frames:[0,1,2,0]}),
-					frameRate:6,
-					repeat: 0
-				});
-
+			
     	
 		}
 
 		function update(){
-			if(right.isDown){
-			  	this.diosprite.play('dio-walk');
+	
 			
 
 		}
