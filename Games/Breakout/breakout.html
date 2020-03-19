@@ -20,7 +20,7 @@
 
 			type: Phaser.AUTO,
 			width: 400,
-			height:450,
+			height:500,
 			backgroundColor:'#3598db',
 			scene: {
 				preload:preload,
@@ -64,7 +64,7 @@
 			left = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
 			right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
 
-			paddle = this.physics.add.sprite(200,400,'paddle');
+			paddle = this.physics.add.sprite(200,450,'paddle').setInteractive({draggable:true}).on('drag',movePaddle);
 			paddle.body.immovable = true;
 
 			bricks = this.physics.add.group(); //dynamic group
@@ -80,8 +80,8 @@
 
     		ball = this.physics.add.sprite(200,300,'ball').setCollideWorldBounds(true).setBounce(1,1); // the horizontal bounce relative to 1, the vertical bounce relative to 1
 
-    		//ball.body.velocity.x = 200;
-    		//ball.body.velocity.y = 200;
+    		ball.body.velocity.x = 100;
+    		ball.body.velocity.y = 100;
 
     	
 		}
@@ -127,6 +127,9 @@
 			ball.body.velocity.x = 200;
 			ball.body.velocity.y = 200;
 			
+		}
+		function movePaddle(pointer,dragX,dragY){
+			this.x = dragX
 		}
 	</script>
 
