@@ -1,0 +1,357 @@
+<!Doctype html>
+<html lang ="en">
+<head>
+	<meta charset ="UTF-8">
+	<title>Title of Game</title>
+	<script src ="https://cdn.jsdelivr.net/npm/phaser@3.15.1/dist/phaser-arcade-physics.min.js"></script>
+	<style type = "text/css">
+		body{
+			margin:0;
+			text-align:center;
+		}
+	</style>
+
+
+</head>
+<body>
+	<script type = "text/javascript">
+        
+		var FirstScene = new Phaser.Class({
+			Extends: Phaser.Scene,
+			initialize: function FirstScene(){
+				
+				Phaser.Scene.call(this, { key: 'firstScene',active:true});	
+
+			}, 
+			preload:function(){
+
+			
+				this.load.spritesheet('diosprite','assets/diospritesheet.png', {frameWidth:73, frameHeight: 122});
+				this.load.image('platform','platform.png')
+				
+				//this.load.audio('splash','dice-assets/splash.mp3');
+				this.load.image('dioweapon','assets/dioweapon.png');
+				this.load.image('enemies','assets/target1.png');
+				this.load.image('door','assets/door.png');
+				
+			},
+			create:function(){
+				//this.add.text(100, 100, 'FirstScene', { fontSize: '20px', fill: '#000' });
+				 this.scene.start('secondScene'/*,data*/); //shutdown this scene and run the given one with some data if yo want to and turn active to true
+			},
+			update:function(){}
+
+
+		});
+
+		var SecondScene = new Phaser.Class({
+			Extends: Phaser.Scene,
+			initialize: function SecondScene(){
+				
+				Phaser.Scene.call(this, { key: 'secondScene'}); //active is false by default
+				this.right;
+        		this.left;
+        		this.up;
+        		this.space;
+
+        		this.diosprite;
+        		
+        		this.platforms;
+        		//this.game_music
+        		this.weapons;
+        		this.removedWeapons;
+
+        		this.enemies;
+        		this.removedEnemies;
+
+        		this.healthBar;
+        		this.healthBox;
+        		this.healthValue = 200;
+
+        		this.timer;
+
+        		this.weaponcount = 10;
+        		this.weaponcounttext;
+        		this.addWeaponTimer;
+
+        		this.camera;
+
+        		this.door;
+
+			}, 
+			create:function(/*data*/){
+
+				//this.add.tileSprite(0,0,1920,600,'background');
+				this.diosprite = this.physics.add.sprite(100,200,'diosprite').setCollideWorldBounds(true);
+				this.physics.world.setBounds(0,0,1920,450);
+				this.camera = this.cameras.main;
+				this.camera.setBounds(0,0,1920,450)
+				this.camera.startFollow(this.diosprite);
+				
+				this.right = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
+				this.left = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
+				this.up = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+				this.space = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+				
+
+				
+
+				this.anims.create({
+					key:'dio-right',
+					frames:this.anims.generateFrameNumbers('diosprite',{start:0,end:5}),
+					frameRate:20,
+					repeat: -1
+				});
+
+				this.anims.create({
+					key:'dio-left',
+					frames:this.anims.generateFrameNumbers('diosprite',{start:6,end:11}),
+					frameRate:20,
+					repeat: -1
+
+				});
+
+				this.anims.create({
+					key:'turn',
+					frames:[{key:'diosprite',frame:12}],
+					frameRate:10,
+					repeat:0
+				});
+
+				/*this.anims.create({
+					key:'tint',
+					frames:this.anims.generateFrameNumbers('diosprite',{start:12,end:13}),
+					frameRate:10,
+					repeat:5
+				});*/
+				this.platforms = this.physics.add.staticGroup();
+				this.platforms.create(400,380,'platform');
+				this.platforms.create(100,380,'platform');
+				
+				this.platforms.create(700,380,'platform');
+				this.platforms.create(1000,380,'platform');
+				this.platforms.create(1300,380,'platform');
+				this.platforms.create(1600,380,'platform');
+				this.physics.add.collider(this.diosprite, this.platforms);
+
+				this.door = this.physics.add.sprite(1800,300,'door');
+				this.door.body.setAllowGravity(false);
+				
+
+				//this.game_music  = this.sound.add('splash');
+				//this.game_music.play()
+
+				this.weapons = this.physics.add.group();
+				this.removedWeapons = this.physics.add.group();
+			
+
+				for(let i = 0; i < this.weaponcount; i++){
+					this.weapons.create(this.diosprite.x,this.diosprite.y,'dioweapon',null,false).body.setAllowGravity(false);
+				}
+
+				this.enemies = this.physics.add.group();
+				this.removedEnemies = this.physics.add.group();
+				for(let i = 0; i < 100; i++){
+					this.enemies.create(0,0,'enemies',null,false).body.setAllowGravity(false);
+				}
+
+
+				this.healthBox = this.add.graphics().fillStyle(0x222222,0.8).fillRect(10,10,200,20).setScrollFactor(0);
+				this.healthBar = this.add.graphics().fillStyle(0x32CD32,1).fillRect(10,10,this.healthValue,20).setScrollFactor(0);
+
+				this.timer = this.time.delayedCall(
+					 Math.floor(Math.random() * 5000 + 1000),this.flyEnemy,null,this); //this is a one-shot timer.using a looped was not giving expected results
+			 	
+			 	this.add.image(322,20,'dioweapon').setScrollFactor(0);
+				this.weaponcounttext = this.add.text(355,11,`${this.weaponcount}`,{ fontSize: '20px', fill: '#000' });
+				this.weaponcounttext.setScrollFactor(0);
+
+				
+				this.addWeaponTimer = this.time.addEvent({
+					delay:5000,
+					loop:true,
+					callback:this.addWeapons,
+					callbackScope:this,
+					paused:true
+				});
+
+
+			}, //data received from the previous scene that called this one.
+			update:function(){
+				if(this.input.keyboard.checkDown(this.space,500)){ 
+	
+					this.attack();
+
+				}else if(this.right.isDown){
+
+					this.diosprite.setVelocityX(150);
+					
+			  		this.diosprite.play('dio-right',true); // the second parameter is set to true so that it ignores this play call if the animation is already running
+			  		if(this.up.isDown && this.diosprite.body.onFloor())
+
+						this.diosprite.setVelocityY(-330)
+			
+
+				}else if (this.left.isDown){
+
+					this.diosprite.setVelocityX(-150);
+			
+					this.diosprite.play('dio-left',true);
+
+					if(this.up.isDown && this.diosprite.body.onFloor())
+
+						this.diosprite.setVelocityY(-330)
+
+				}else if(this.up.isDown && this.diosprite.body.onFloor()){
+
+					this.diosprite.setVelocityY(-330)
+
+
+				}
+				else {
+
+					this.diosprite.setVelocityX(0);
+					
+					
+					this.diosprite.play('turn',true);
+
+				}
+				if (this.weapons.getLength() < 5) this.addWeaponTimer.paused = false;
+
+				this.physics.collide(this.removedWeapons,this.removedEnemies,this.hit,null,this);
+
+				this.physics.collide(this.diosprite,this.removedEnemies,this.reduceHealth,null,this);
+
+				this.physics.collide(this.diosprite,this.door,this.changelevel,null,this);
+
+				
+			},
+			changelevel:function(){
+				
+				this.scene.start('thirdScene');
+			},
+			attack:function(){
+				if(this.weapons.getLength() > 0){
+	    		
+		    		let weapon = this.weapons.getFirstAlive(false,this.diosprite.x,this.diosprite.y);//,'dioweapon',null,true);// the first arguement is set to false so that it doesnt create new game object, second and third arguments set the x and y position, the rest are optional arguments that are used in case a new game object is created.
+		    		
+		    		weapon.visible = true;
+		    		
+		    		
+		    		this.removedWeapons.add(weapon); // create will make a new object, add will refer to the same object
+		    		//setting the velocity before will reset it to 0 as add will reset it to 0; adding to removed weapons actually resets the values even gravity setting.
+		    		weapon.body.setAllowGravity(false);
+		    		weapon.body.velocity.x = 200;
+		    		
+		    		
+		    		this.weapons.remove(weapon);
+		    		this.weaponcount = this.weapons.getLength();
+		    		this.weaponcounttext.setText(`${this.weaponcount}`);
+	    		
+    			}else{
+    				console.log("out of weapons!");
+    			}
+			},
+			flyEnemy:function(){
+
+				if(this.enemies.getLength() > 0){
+					let enemy = this.enemies.getFirstAlive(false,this.diosprite.x + 400,Math.floor(Math.random() * 300 + 20));
+					enemy.visible = true;
+					this.removedEnemies.add(enemy);
+					enemy.body.setAllowGravity(false);
+					enemy.body.velocity.x = -200;
+					this.enemies.remove(enemy); 
+				
+					this.timer = this.time.delayedCall(
+					 	Math.floor(Math.random() * 5000 + 2000),this.flyEnemy,null,this);
+				}else{
+					this.timer.remove(false);
+				}
+				
+			},
+			hit:function(weapon,enemy){
+				weapon.disableBody(true,true);
+				enemy.disableBody(true,true);
+
+			},
+			reduceHealth:function(diosprite,enemy){
+				//add tint to dio's body
+				//this.diosprite.setTint(0x7a7a7a);//you can play an animation with tint flashing.
+
+				//reduce health
+				this.healthValue -=10;
+				this.healthBar.clear(); 
+				this.healthBar.fillStyle(0x32CD32,1)
+				this.healthBar.fillRect(10,10,this.healthValue,20);
+				this.diosprite.play('tint',true);
+
+				
+				//disable enemy
+				enemy.disableBody(true,true);
+			},
+			addWeapons: function(){
+				console.log("here");
+				if (this.weapons.getLength() < 5){
+					this.weapons.create(this.diosprite.x,this.diosprite.y,'dioweapon',null,false).body.setAllowGravity(false);
+
+		    		this.weaponcount = this.weapons.getLength();
+		    		this.weaponcounttext.setText(`${this.weaponcount}`);
+				}
+			}
+		});
+
+		var ThirdScene = new Phaser.Class({
+			Extends: Phaser.Scene,
+			initialize: function ThirdScene(){
+				
+				Phaser.Scene.call(this, { key: 'thirdScene',active:true});
+
+				this.diosprite;
+
+
+			}, 
+			create: function(){
+				//diosprite
+				//platforms
+				//enemies
+
+
+			},
+			update: function(){
+
+				//handle input events,collision
+			}
+
+		});
+
+		var config ={
+
+			type: Phaser.AUTO,
+			width: 400,
+			height:450,
+			backgroundColor:'#8080FF',
+			scene:[FirstScene,SecondScene,ThirdScene],
+			physics:{
+				default:'arcade',
+				arcade:{
+					gravity:{y:400},
+					debug:false
+				}
+			},
+
+		}
+
+
+		var game = new Phaser.Game(config);
+	
+
+		
+	
+	</script>
+
+
+
+	</body>
+
+</html>
